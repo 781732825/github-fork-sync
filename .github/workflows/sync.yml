@@ -1,0 +1,36 @@
+name: Fork sync
+
+on:
+  schedule:
+    # Every Monday at 03:17 UTC.
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Report what would be synced without pushing anything'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    name: Fast-forward every fork to its upstream
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync forks
+        env:
+          # Set the SYNC_TOKEN repository secret to a token that can read and
+          # write every repository you want synced. The automatic GITHUB_TOKEN
+          # only reaches this repository, so it cannot sync the others.
+          GH_SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          GH_SYNC_DRY_RUN: ${{ inputs.dry_run }}
+        run: REPORT_PATH="$GITHUB_STEP_SUMMARY" python3 sync_forks.py
